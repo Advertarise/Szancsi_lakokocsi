@@ -44,15 +44,3 @@ export function formatCompact(amount: number, display: CurrencyCode = baseCurren
   const thousands = value / 1000
   return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(1).replace(".", ",")}e`
 }
-
-/**
- * A Stripe a HUF-ot és az EUR-t is kéttizedes pénznemként kezeli, ezért a
- * forint- vagy euróösszeget ×100 kell átadni (HUF esetén a fillér mindig 00).
- */
-export function toStripeAmount(amount: number): number {
-  return Math.round(amount) * 100
-}
-
-export function fromStripeAmount(amount: number): number {
-  return Math.round(amount / 100)
-}

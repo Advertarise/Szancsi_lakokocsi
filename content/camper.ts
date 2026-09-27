@@ -99,7 +99,6 @@ export const camper = defineCamper({
     cleaningFee: 25000,
     securityDeposit: {
       amount: 300000,
-      collect: "atPickup",
       note: "Átvételkor fizetendő készpénzben vagy átutalással, a jármű sérülésmentes visszaadása után 7 napon belül visszajár.",
     },
     depositPercent: 30,
@@ -118,7 +117,11 @@ export const camper = defineCamper({
     { id: "starlink", name: "Starlink Mini", description: "Műholdas internet a legeldugottabb helyeken is", price: 4000, unit: "perNight", icon: "SatelliteDish" },
   ],
 
-  // ── Blokkolt napok (szerviz, saját használat) ─ mindkét nap beleszámít ──
+  // ── Nem foglalható napok ─ mindkét nap beleszámít ─────────────────────
+  //  Ide kerül minden VISSZAIGAZOLT FOGLALÁS is: a naptár ebből tudja, mely napok
+  //  foglaltak. Érkezés–távozás esetén a "to" a távozás előtti nap legyen
+  //  (a távozás napján már érkezhet a következő vendég), pl. júl. 1–8. foglalás:
+  //  { from: "2027-07-01", to: "2027-07-07", reason: "Foglalás RN-ABC234 – Kiss Anna" }
   blockedDates: [
     { from: "2026-10-12", to: "2026-10-16", reason: "Őszi szerviz" },
     { from: "2026-12-23", to: "2026-12-27", reason: "Saját használat – karácsony" },
@@ -161,7 +164,7 @@ export const camper = defineCamper({
     {
       icon: "CalendarCheck",
       title: "Foglalás",
-      text: "Válaszd ki a dátumokat és az extrákat, add meg az adataidat, majd fizess biztonságosan kártyával, Apple Pay-jel vagy Google Pay-jel. A visszaigazolás azonnal érkezik e-mailben.",
+      text: "Válaszd ki a dátumokat és az extrákat, add meg az adataidat, és küldd el a foglalási kérést. Hamarosan e-mailben visszaigazoljuk, és elküldjük az utalási adatokat.",
     },
     {
       icon: "KeyRound",
@@ -190,7 +193,7 @@ export const camper = defineCamper({
     { question: "Milyen jogosítvány kell a vezetéshez?", answer: "Elég a B kategóriás jogosítvány, mert a lakóautó össztömege 3,5 tonna. A vezetőnek legalább 21 évesnek kell lennie, és legalább 2 éve kell rendelkeznie jogosítvánnyal." },
     { question: "Mit tartalmaz a bérleti díj?", answer: "Kötelező és casco biztosítást, 24 órás európai assistance-t, a teljes konyhai felszerelést, gázpalackot, WC-vegyszert, valamint napi 250 km-t. Az üzemanyag és az autópályadíjak a bérlőt terhelik." },
     { question: "Mennyi a kaució, és mikor kapom vissza?", answer: "A kaució 300 000 Ft, amit átvételkor kell kifizetni készpénzben vagy átutalással. Ha a lakóautó sérülésmentesen, tisztán és tele tankkal érkezik vissza, 7 napon belül visszautaljuk." },
-    { question: "Hogyan működik az előleges fizetés?", answer: "Foglaláskor választhatod, hogy csak a teljes összeg 30%-át fizeted ki. A fennmaradó részt 14 nappal az indulás előtt automatikusan levonjuk ugyanarról a kártyáról – erről előre e-mailt is küldünk. Ha az indulás 16 napon belül van, csak a teljes összeg fizethető." },
+    { question: "Hogyan működik az előleges fizetés?", answer: "Foglaláskor választhatod, hogy a visszaigazolás után csak a bérleti díj 30%-át utalod el előlegként. A fennmaradó részt legkésőbb 14 nappal az indulás előtt kell átutalni – erre e-mailben emlékeztetünk. Ha az indulás 16 napon belül van, a teljes összeget kell egyben kifizetni." },
     { question: "Mehetek vele külföldre?", answer: "Igen, az Európai Unió országaiba, valamint Svájcba, Norvégiába és az Egyesült Királyságba szabadon utazhatsz. Egyéb országokba előzetes egyeztetés szükséges." },
     { question: "Vihetek kisállatot?", answer: "Igen, legfeljebb 2 jól nevelt kutya vagy macska jöhet. Kérjük, ilyenkor válaszd a Kisállat-csomag extrát, hogy a következő vendégek is makulátlan autót kapjanak." },
     { question: "Mi történik, ha le kell mondanom az utat?", answer: "Az indulás előtt 60 nappal még díjmentesen lemondhatod, utána a lemondási feltételekben leírt mértékben térítjük vissza a befizetett összeget. Időpont-módosításra egyszer díjmentesen van lehetőség." },
@@ -217,7 +220,7 @@ export const camper = defineCamper({
         { daysBefore: 0, refundPercent: 0 },
       ],
       notes: [
-        "A visszatérítés a befizetett bérleti díjra vonatkozik, a fizetéshez használt kártyára érkezik 5–10 munkanapon belül.",
+        "A visszatérítés a befizetett bérleti díjra vonatkozik, a befizetéshez használt bankszámlára utaljuk 5 munkanapon belül.",
         "Időpont-módosítás egyszer díjmentes, ha legalább 30 nappal az érkezés előtt jelzed, és az új időpontban a lakóautó szabad.",
         "Ha a mi oldalunkon merül fel akadály (például műszaki hiba miatt), a teljes befizetett összeget visszatérítjük.",
         "A korábbi visszahozatal nem jár díjvisszatérítéssel.",
@@ -234,7 +237,7 @@ export const camper = defineCamper({
       {
         title: "2. A foglalás és a szerződés létrejötte",
         paragraphs: [
-          "A szerződés a fizetés sikeres teljesítésével és a visszaigazoló e-mail kiküldésével jön létre. A kiválasztott időpontot a rendszer a fizetés megkezdésekor 15 percre zárolja; ha a fizetés ezen belül nem történik meg, az időpont felszabadul.",
+          "A weboldalon elküldött foglalási kérés nem minősül megrendelésnek. A Bérbeadó a kérést e-mailben visszaigazolja vagy elutasítja. A bérleti szerződés a visszaigazolás után az előleg vagy a teljes bérleti díj határidőben történő beérkezésével jön létre. Ha a befizetés a visszaigazolásban megadott határidőn belül nem érkezik meg, a Bérbeadó az időpontot felszabadíthatja.",
           "A 45/2014. (II. 26.) Korm. rendelet 29. § (1) bekezdés l) pontja alapján a meghatározott időpontra szóló gépjármű-bérleti szerződés esetén a Bérlőt nem illeti meg a 14 napos indokolás nélküli elállási jog; a lemondásra a Lemondási feltételek irányadók.",
         ],
       },
@@ -242,8 +245,8 @@ export const camper = defineCamper({
         title: "3. Árak és fizetés",
         paragraphs: [
           "A bérleti díj a foglalás pillanatában a weboldalon feltüntetett napi díjakból, a takarítási díjból és a kiválasztott extrák díjából áll. Az árak bruttó árak.",
-          "A Bérlő választhat a teljes összeg azonnali kifizetése, illetve előleg fizetése között. Előleg választása esetén a fennmaradó összeget a Bérbeadó az érkezés előtt 14 nappal automatikusan terheli a foglaláskor használt bankkártyára, amihez a Bérlő a foglalással hozzájárul. Sikertelen terhelés esetén a Bérlő e-mailben fizetési linket kap.",
-          "A fizetés a Stripe biztonságos fizetési felületén történik; a kártyaadatok a Bérbeadóhoz nem jutnak el.",
+          "A Bérlő választhat a teljes bérleti díj egy összegben történő kifizetése, illetve előleg fizetése között. Előleg választása esetén a fennmaradó összeget legkésőbb az érkezés előtt 14 nappal kell megfizetni.",
+          "A fizetés banki átutalással történik a visszaigazoló e-mailben megadott számlaszámra.",
         ],
       },
       {
@@ -295,7 +298,7 @@ export const camper = defineCamper({
       {
         title: "2. A kezelt adatok köre",
         paragraphs: [
-          "Név, e-mail-cím, telefonszám, lakcím, születési dátum, a jogosítvány száma, kiállító országa és érvényességi adatai, az utazók száma, a foglalás adatai és a fizetés azonosítói. Bankkártyaadatokat nem kezelünk, azokat kizárólag a Stripe dolgozza fel.",
+          "Név, e-mail-cím, telefonszám, lakcím, születési dátum, a jogosítvány száma, kiállító országa és érvényességi adatai, az utazók száma, a foglalás adatai, valamint a befizetések adatai. Bankkártyaadatokat nem kezelünk.",
         ],
       },
       {
@@ -307,13 +310,13 @@ export const camper = defineCamper({
       {
         title: "4. Adatfeldolgozók",
         paragraphs: [
-          "Stripe Payments Europe Ltd. (online fizetés), Supabase Inc. (adattárolás), Resend Inc. (e-mail küldés), Vercel Inc. (tárhely). Az adatfeldolgozók az adatokat kizárólag a szolgáltatás nyújtásához használják.",
+          "Formspree Inc. (a foglalási űrlap továbbítása e-mailben), GitHub Inc. (a weboldal tárhelye). Az adatfeldolgozók az adatokat kizárólag a szolgáltatás nyújtásához használják.",
         ],
       },
       {
         title: "5. Megőrzési idő",
         paragraphs: [
-          "A foglalási adatokat a szerződés megszűnésétől számított 5 évig, a számviteli bizonylatokat 8 évig őrizzük meg. A meg nem fizetett, lejárt foglalások adatait 30 nap után töröljük.",
+          "A foglalási adatokat a szerződés megszűnésétől számított 5 évig, a számviteli bizonylatokat 8 évig őrizzük meg. A meg nem valósult foglalási kérések adatait 30 nap után töröljük.",
         ],
       },
       {
@@ -325,7 +328,7 @@ export const camper = defineCamper({
       {
         title: "7. Sütik",
         paragraphs: [
-          "Az oldal csak a működéshez szükséges böngészőtárhelyet használja (például a sötét mód és a pénznem beállításának megjegyzésére). Követő vagy hirdetési sütiket nem használunk. A térképet az OpenStreetMap szolgáltatja.",
+          "Az oldal csak a működéshez szükséges böngészőtárhelyet használja: megjegyzi a sötét mód és a pénznem beállítását, a félbehagyott foglalási űrlap adatait pedig csak az adott böngészőfül bezárásáig őrzi meg. Követő vagy hirdetési sütiket nem használunk. A térképet az OpenStreetMap szolgáltatja.",
         ],
       },
     ],
@@ -335,7 +338,7 @@ export const camper = defineCamper({
   seo: {
     title: "RoadNest – prémium lakóautó-bérlés Budapest mellől",
     description:
-      "Bérelj négyszemélyes, teljesen felszerelt lakóautót zuhannyal, konyhával és napelemmel. Online foglalás, azonnali visszaigazolás, rugalmas fizetés.",
+      "Bérelj négyszemélyes, teljesen felszerelt lakóautót zuhannyal, konyhával és napelemmel. Online foglalási kérés, gyors visszaigazolás, rugalmas fizetés.",
     keywords: ["lakóautó bérlés", "lakóautó kölcsönzés", "campervan bérlés", "lakóbusz bérlés Budapest", "kastenwagen bérlés", "RoadNest"],
   },
 })

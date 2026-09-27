@@ -1,25 +1,57 @@
 # RoadNest – egyoldalas bemutató- és foglalóoldal egyetlen lakóautóhoz
 
-Modern, reszponzív, magyar nyelvű weboldal online foglalással és fizetéssel.
+Modern, reszponzív, magyar nyelvű weboldal online foglalási kéréssel. **GitHub Pagesen fut** – nincs szerver, adatbázis vagy havidíj.
 Nincs admin felület: minden tartalmat **egyetlen fájlban** (`content/camper.ts`) állítasz be, a képeket pedig a `public/camper/` mappába teszed.
 
 **Mit tud?**
 
 - Teljes képernyős kezdőkép, bemutatkozás, galéria nagyítással, felszereltség, árak és szezonok, „Hogyan működik”, vélemények, GYIK, térkép és kapcsolat
 - Kétoldalas foglalási naptár: foglalt napok szürkén, a napok alatt az aznapi ár, minimum éjszakák betartatása
-- Árpanel: napi díj × éjszakák (szezononként), takarítási díj, extrák, kaució, összesen
-- 4 lépéses foglalás: dátumok és extrák → személyes és jogosítványadatok → feltételek elfogadása → fizetés a Stripe-on (bankkártya, Apple Pay, Google Pay)
-- Teljes összeg vagy előleg fizetése; előlegnél a maradékot a rendszer automatikusan levonja 14 nappal indulás előtt
-- Dupla foglalás ellen adatbázis-szintű védelem, a dátumok 15 percre zárolódnak a fizetésig
-- Visszaigazoló e-mail neked és a vendégnek (naptárfájllal), emlékeztető indulás előtt
+- Árpanel: napi díj × éjszakák (szezononként), takarítási díj, extrák, kaució, összesen, előleg
+- 4 lépéses foglalás: dátumok és extrák → személyes és jogosítványadatok → feltételek elfogadása → **foglalási kérés elküldése**
+- A kérés minden adattal e-mailben érkezik hozzád; te igazolod vissza, és te küldöd el az utalási adatokat
 - Sötét mód, mobilon alul fix „ár + Foglalás” sáv, billentyűzettel is kezelhető, tájékoztató EUR árak
 - SEO: meta tagek, OpenGraph, strukturált adatok, sitemap
 
 ---
 
-## 1. A tartalom átírása – `content/camper.ts`
+## 1. Hogyan működik a foglalás?
 
-Nyisd meg a `content/camper.ts` fájlt (pl. [VS Code](https://code.visualstudio.com/)-ban). Minden szöveg, ár és beállítás itt van, magyar megjegyzésekkel. Ha elgépelsz valamit (pl. rossz dátumformátum vagy ikonnév), a szerkesztő pirossal aláhúzza.
+1. A vendég kiválasztja a dátumokat és az extrákat. A naptár csak szabad napokat enged kiválasztani, és betartatja a minimum éjszakák számát.
+2. Megadja az adatait (a jogosítványt is), elfogadja a feltételeket, és elküldi a **foglalási kérést**. Ekkor még nem fizet.
+3. A kérés e-mailben megérkezik hozzád, egy azonosítóval (pl. `RN-7K3F9Q`), a díj részletezésével és a vendég minden adatával. A levélre válaszolva közvetlenül a vendégnek írsz.
+4. **Te** visszaigazolod e-mailben, és elküldöd az utalási adatokat (teljes összeg vagy előleg, ahogy a vendég választotta).
+5. Ha megjött a pénz, beírod a foglalást a `content/camper.ts` `blockedDates` listájába, és feltöltöd (push). Pár perc múlva a naptárban már foglaltként látszik.
+
+> Mivel nincs adatbázis, a naptár csak azt tudja, amit a `blockedDates`-be írsz. Két vendég kérhet ugyanarra az időpontra – ilyenkor az egyiket elutasítod vagy másik időpontot ajánlasz.
+
+### Honnan érkezik a kérés e-mailben? – Formspree
+
+A statikus oldal a [Formspree](https://formspree.io) szolgáltatásán keresztül küldi el a kérést. Van ingyenes csomagja (a havi keretet lásd az oldalukon), és a beérkezett kérések a Formspree felületén vissza is kereshetők.
+
+1. Regisztrálj a [formspree.io](https://formspree.io)-n azzal az e-mail-címmel, ahová a foglalásokat kéred.
+2. **New form** → adj neki nevet (pl. „RoadNest foglalások”). A kapott címből az utolsó rész az azonosító: `https://formspree.io/f/xyzabcde` → `xyzabcde`.
+3. A GitHubon: **Settings → Secrets and variables → Actions → Variables → New repository variable**: név `FORMSPREE_ID`, érték `xyzabcde`.
+4. Indíts új kitelepítést (bármilyen push, vagy **Actions → Kitelepítés a GitHub Pagesre → Run workflow**).
+5. Ha a Formspree megerősítő levelet küld az e-mail-címedre, hagyd jóvá – amíg ez nincs meg, nem továbbítja a kéréseket.
+
+**Ha nincs beállítva Formspree**, az oldal akkor is működik: a „Foglalási kérés elküldése” gomb a vendég levelezőprogramjában nyit meg egy kitöltött levelet a `contact.email` címre. Ez kevésbé kényelmes (a vendégnek el kell küldenie), ezért a Formspree ajánlott.
+
+## 2. Kitelepítés a GitHub Pagesre
+
+A kód már a GitHubon van. A kitelepítést egy GitHub Actions workflow végzi ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)): **minden push után** felépíti az oldalt, és kiteszi a Pagesre.
+
+**Egyszeri beállítás:**
+
+1. GitHub → a repó **Settings → Pages** → *Build and deployment* → **Source: GitHub Actions**.
+2. Pushold fel a változásokat a `main` ágra. Az **Actions** fülön látod a folyamatot (kb. 2 perc).
+3. Az oldal címe: **https://advertarise.github.io/Szancsi_lakokocsi/**
+
+**Saját domain (pl. roadnest.hu):** *Settings → Pages → Custom domain*, majd a domainszolgáltatónál állítsd be a GitHub által kért DNS-rekordokat ([leírás](https://docs.github.com/pages/configuring-a-custom-domain-for-your-github-pages-site)). A workflow a címet és az almappát magától átveszi, a kódban nem kell semmit átírni.
+
+## 3. A tartalom átírása – `content/camper.ts`
+
+Nyisd meg a `content/camper.ts` fájlt (pl. [VS Code](https://code.visualstudio.com/)-ban, vagy közvetlenül a GitHub webes szerkesztőjében: a fájl megnyitása után a ceruza ikon). Minden szöveg, ár és beállítás itt van, magyar megjegyzésekkel. Ha elgépelsz valamit (pl. rossz dátumformátum vagy ikonnév), a szerkesztő pirossal aláhúzza, és a GitHub kitelepítése is hibát jelez – ilyenkor a régi oldal marad fent.
 
 | Mit szeretnél módosítani? | Hol találod? |
 | --- | --- |
@@ -29,12 +61,12 @@ Nyisd meg a `content/camper.ts` fájlt (pl. [VS Code](https://code.visualstudio.
 | Férőhely, alvóhely, váltó, üzemanyag, méretek, kisállat | `specs`, `vehicle` |
 | Felszereltség | `amenities` – ikon + felirat + leírás |
 | Alapár, szezonális árak, minimum éjszakák | `pricing.baseNightlyPrice`, `pricing.seasons`, `pricing.minNights` |
-| Takarítási díj, kaució, előleg %-a | `pricing.cleaningFee`, `pricing.securityDeposit`, `pricing.depositPercent` |
+| Takarítási díj, kaució, előleg %-a, hátralék határideje | `pricing.cleaningFee`, `pricing.securityDeposit`, `pricing.depositPercent`, `pricing.balanceDueDaysBefore` |
 | Választható extrák | `extras` – `unit: "perNight"` (éjszakánként) vagy `"perBooking"` (egyszeri) |
-| Blokkolt napok (szerviz, saját használat) | `blockedDates` |
+| **Foglalt napok** (visszaigazolt foglalások, szerviz, saját használat) | `blockedDates` |
 | Foglalási szabályok (legkorábbi érkezés, életkor, stb.) | `booking` |
 | Átvételi cím, térkép, átvételi/leadási idő | `pickup` |
-| Telefon, e-mail, WhatsApp, Instagram | `contact` |
+| Telefon, e-mail (ide mennek a levelezős kérések is), WhatsApp, Instagram | `contact` |
 | „Hogyan működik” lépései | `howItWorks` |
 | Vélemények, GYIK | `reviews`, `faq` |
 | ÁSZF, adatvédelem, lemondási feltételek, cégadatok | `legal` |
@@ -42,152 +74,67 @@ Nyisd meg a `content/camper.ts` fájlt (pl. [VS Code](https://code.visualstudio.
 
 **Formátumok**
 
-- **Dátum:** `"2026-07-01"` (év-hónap-nap). A blokkolt időszak mindkét napja nem foglalható.
+- **Dátum:** `"2026-07-01"` (év-hónap-nap).
+- **Foglalt napok:** a `from` és a `to` napja is foglalt. Egy júl. 1-jén érkező és júl. 8-án távozó vendégnél: `{ from: "2027-07-01", to: "2027-07-07", reason: "RN-7K3F9Q – Kiss Anna" }` – így júl. 8-án már érkezhet a következő vendég. A `reason` csak neked szól, a látogatók nem látják.
 - **Szezon:** évente ismétlődő `"06-15"` (hónap-nap). Átnyúlhat az évfordulón is (`from: "12-20", to: "01-06"`). Ha két szezon átfedi egymást, a listában előbb álló érvényes. Ha egy szezonban `minNights` is meg van adva, ott az érkezés napjától ennyi éjszaka a minimum.
-- **Ár:** egész szám forintban, szóköz nélkül (`45000`). Tájékoztató EUR árakhoz add meg az árfolyamot: `eurRate: 395` (ha nem kell, töröld a sort – eltűnik a Ft/€ kapcsoló). A fizetés mindig forintban történik.
+- **Ár:** egész szám forintban, szóköz nélkül (`45000`). Tájékoztató EUR árakhoz add meg az árfolyamot: `eurRate: 395` (ha nem kell, töröld a sort – eltűnik a Ft/€ kapcsoló).
 - **Ikonok:** a [lucide.dev/icons](https://lucide.dev/icons) oldalról; a nevet NagyKezdőbetűvel, szóköz nélkül írd (pl. `cooking-pot` → `"CookingPot"`).
 
-> ⚠️ **Élesítés előtt:** a vélemények, a cím, a cégadatok és a jogi szövegek **mintaszövegek**. Cseréld valódiakra, a jogi szövegeket nézesd át jogásszal. A jogi szövegekben lévő számokat (kaució, időpontok) nem frissíti automatikusan a rendszer, ha az árakat módosítod.
+> ⚠️ **Élesítés előtt:** a vélemények, a cím, a cégadatok, az e-mail-cím és a jogi szövegek **mintaszövegek**. Cseréld valódiakra, a jogi szövegeket nézesd át jogásszal. A jogi szövegekben lévő számokat (kaució, időpontok) nem frissíti automatikusan a rendszer, ha az árakat módosítod.
 
-## 2. Képek – `public/camper/`
+## 4. Képek – `public/camper/`
 
 1. Másold a fotóidat a `public/camper/` mappába. A fájlnév legyen kisbetűs, ékezet és szóköz nélkül (pl. `kulso-balaton.jpg`).
-2. A `content/camper.ts`-ben hivatkozz rájuk így: `"/camper/kulso-balaton.jpg"`.
-3. Minden képhez írj rövid, leíró `alt` szöveget (képernyőolvasóknak és a Google-nek).
+2. **Méretezd át őket webre:** `npm run kepek` – a túl nagy képeket 2400 px szélesre kicsinyíti és tömöríti (a már kicsiket nem bántja). A GitHub Pages nem kicsinyít, egy telefonos fotó átméretezés nélkül 5–10 MB is lehet, ami nagyon lassítja az oldalt.
+3. A `content/camper.ts`-ben hivatkozz rájuk így: `"/camper/kulso-balaton.jpg"`.
+4. Minden képhez írj rövid, leíró `alt` szöveget (képernyőolvasóknak és a Google-nek).
 
-| Kép | Ajánlott méret | Tipp |
+| Kép | Ajánlott | Tipp |
 | --- | --- | --- |
-| Kezdőkép (`hero.image`) | min. 2400 × 1350 px, fekvő | A jármű inkább jobbra legyen, a bal oldalra kerül a szöveg. Ez lesz a megosztási (OpenGraph) kép is. |
-| Galéria | min. 1800 × 1200 px (3:2), fekvő | Az első kép nagyobb méretben jelenik meg. |
+| Kezdőkép (`hero.image`) | fekvő, kb. 16:9 | A jármű inkább jobbra legyen, a bal oldalra kerül a szöveg. Ez lesz a megosztási (OpenGraph) kép is. |
+| Galéria | fekvő, kb. 3:2 | Az első kép nagyobb méretben jelenik meg. |
 
-JPG vagy WebP, képenként legfeljebb ~5 MB. Az oldal automatikusan kicsinyíti és modern formátumra alakítja őket. A mappában most mintaillusztrációk vannak – ezeket nyugodtan töröld.
+A mappában most mintaillusztrációk vannak – ezeket nyugodtan töröld.
 
-## 3. Futtatás a saját gépeden
+## 5. Futtatás a saját gépeden (nem kötelező)
 
-Kell hozzá [Node.js](https://nodejs.org/) (20-as vagy újabb).
+Csak akkor kell, ha feltöltés előtt meg szeretnéd nézni a változást. Kell hozzá [Node.js](https://nodejs.org/) (20-as vagy újabb).
 
 ```bash
 npm install
-cp .env.example .env.local   # majd töltsd ki (lásd lent)
-npm run dev                  # → http://localhost:3000
+npm run dev        # → http://localhost:3000
+npm run build      # a kész statikus oldal az out/ mappába kerül
+npm run kepek      # képek átméretezése
+npm run lint       # kódellenőrzés
 ```
 
-**Demó mód:** kulcsok nélkül is elindul az oldal. Ilyenkor a naptár csak a `blockedDates` napokat mutatja foglaltnak, a fizetés gomb pedig udvarias üzenetet ad, hogy az online foglalás még nincs beállítva.
+A Formspree-t helyben is kipróbálhatod: másold le a `.env.example`-t `.env.local` néven, és írd bele a `NEXT_PUBLIC_FORMSPREE_ID`-t.
 
-Egyéb parancsok: `npm run build` (éles build), `npm run lint` (kódellenőrzés).
+## 6. Élesítés előtti ellenőrzőlista
 
-## 4. A szolgáltatások beállítása
-
-Mindháromnak van ingyenes csomagja. A kulcsokat a `.env.local` fájlba (helyben), illetve a Vercel beállításaiba (élesben) kell beírni. A változók listája és leírása a [`.env.example`](.env.example) fájlban van.
-
-### Supabase – a foglalások adatbázisa
-
-1. Regisztrálj a [supabase.com](https://supabase.com)-on, és hozz létre egy új projektet (régió: pl. Frankfurt).
-2. Bal oldalt **SQL Editor** → **New query** → másold be a [`supabase/migrations/0001_bookings.sql`](supabase/migrations/0001_bookings.sql) teljes tartalmát → **Run**.
-3. **Project Settings → API:** a *Project URL* kerüljön a `SUPABASE_URL`-be, a *service_role* (vagy az új *secret*, `sb_secret_…`) kulcs a `SUPABASE_SERVICE_ROLE_KEY`-be.
-
-A kulcs titkos, csak a szerver használja. A táblát a sor szintű biztonság (RLS) minden más elől elzárja.
-
-### Stripe – fizetés
-
-1. Regisztrálj a [stripe.com](https://stripe.com)-on. Teszteléshez maradj **Test mode**-ban.
-2. **Developers → API keys:** a *Secret key* (`sk_test_…`) kerüljön a `STRIPE_SECRET_KEY`-be.
-3. **Settings → Payment methods:** ellenőrizd, hogy a *Cards*, az *Apple Pay* és a *Google Pay* be van kapcsolva. A Stripe fizetési oldalán ezek maguktól megjelennek.
-4. **Webhook (élesben):** *Developers → Webhooks → Add endpoint*
-   - URL: `https://a-te-domained.hu/api/stripe/webhook`
-   - Események: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.succeeded`, `payment_intent.payment_failed`
-   - A *Signing secret* (`whsec_…`) kerüljön a `STRIPE_WEBHOOK_SECRET`-be.
-5. **Webhook (helyben):** telepítsd a [Stripe CLI](https://docs.stripe.com/stripe-cli)-t, és futtasd:
-   ```bash
-   stripe listen --forward-to localhost:3000/api/stripe/webhook
-   ```
-   Az itt kiírt `whsec_…` titkot írd a `.env.local`-ba.
-
-**Tesztkártyák** (bármilyen jövőbeli lejárat és CVC):
-
-| Kártyaszám | Mit tesztel? |
-| --- | --- |
-| `4242 4242 4242 4242` | Sikeres fizetés |
-| `4000 0025 0000 3155` | Banki megerősítés (3D Secure) |
-| `4000 0027 6000 3184` | Sikeres előleg, de a hátralék automatikus levonása meghiúsul (a vendég fizetési linket kap) |
-
-### Resend – e-mailek
-
-1. Regisztrálj a [resend.com](https://resend.com)-on.
-2. **Domains → Add domain:** add hozzá a domainedet, és állítsd be a kapott DNS-rekordokat a domainszolgáltatódnál. Amíg ez nincs meg, csak a saját regisztrációs címedre tudsz levelet küldeni.
-3. **API Keys:** a kulcs kerüljön a `RESEND_API_KEY`-be.
-4. `EMAIL_FROM`: pl. `RoadNest <foglalas@a-te-domained.hu>`; `OWNER_EMAIL`: ahová az új foglalásokról kérsz értesítést.
-
-## 5. Telepítés a Vercelre
-
-1. Töltsd fel a projektet egy **GitHub**-tárolóba (a `.env.local` fájl nem kerül fel, ez így helyes).
-2. A [vercel.com](https://vercel.com)-on: **Add New → Project →** válaszd ki a tárolót. A beállításokat (Next.js) a Vercel magától felismeri.
-3. **Environment Variables:** add meg a `.env.example` összes változóját. `NEXT_PUBLIC_SITE_URL` = az éles cím (pl. `https://roadnest.hu`). `CRON_SECRET`-nek adj meg egy hosszú véletlen szöveget (pl. `openssl rand -hex 32`).
-4. **Deploy.**
-5. **Settings → Domains:** kösd be a saját domainedet, majd frissítsd a `NEXT_PUBLIC_SITE_URL`-t és indíts új deployt.
-6. A Stripe-ban állítsd be a webhookot az éles címre (lásd fent), és a kapott titkot írd a Vercelbe.
-7. **Napi ütemezett feladat:** a [`vercel.json`](vercel.json) alapján a Vercel minden nap 06:00-kor (UTC, nálunk 7–8 óra) meghívja a `/api/cron/daily` címet. Ez felszabadítja a lejárt zárolásokat, levonja az esedékes hátralékokat, kiküldi az emlékeztetőket, és törli a 30 napnál régebbi, ki nem fizetett foglalásokat. Az ingyenes Hobby csomagban is működik.
-
-Ha élesíteni szeretnél: a Stripe-ban kapcsolj **Live mode**-ra, és cseréld a teszt kulcsokat (`sk_live_…`, új webhook titok) a Vercelben.
-
-## 6. Hogyan működik a foglalás a háttérben?
-
-1. A vendég kiválasztja a dátumokat, megadja az adatait, és a **„Tovább a biztonságos fizetéshez”** gombra kattint.
-2. A szerver újraszámolja az árat (a böngészőben számolt árat soha nem veszi át), ellenőrzi a szabályokat, majd **függő** foglalást hoz létre, ami **15 percre** zárolja a dátumokat.
-3. Az adatbázis egy *exclusion constraint* segítségével elutasít minden átfedő foglalást – két vendég egyszerre sem tudja lefoglalni ugyanazt a napot. A távozás napján a következő vendég már érkezhet.
-4. A vendég a Stripe oldalán fizet. A Stripe **webhookja** véglegesíti a foglalást **megerősített** állapotúra, és e-mailt küld neked és a vendégnek.
-5. Ha a fizetés megszakad vagy lejár, a dátumok felszabadulnak. Ha valaki a zárolás lejárta után mégis fizetne, és közben más lefoglalta az időpontot, a rendszer automatikusan visszatéríti az összeget, és mindkettőtöket értesít.
-6. **Előlegnél** a Stripe elmenti a kártyát, és a napi feladat 14 nappal indulás előtt levonja a maradékot. Ha ez nem sikerül (pl. a bank megerősítést kér), a vendég fizetési linket kap, te pedig értesítést.
-
-### Hol látom a foglalásokat?
-
-- **E-mailben:** minden foglalásról részletes értesítést kapsz (dátumok, vendég adatai, jogosítvány, összegek, link a Stripe-fizetéshez).
-- **Stripe irányítópult → Payments:** az összes fizetés, a leírásban a foglalási azonosítóval (pl. `RN-7K3F9Q`).
-- **Supabase → Table Editor → `bookings`:** az összes foglalás minden adattal.
-
-### Lemondás kezelése
-
-Automatikus lemondás nincs, ezt te intézed:
-
-1. **Stripe → Payments →** keresd meg a fizetést → **Refund** (a lemondási feltételek szerinti összeggel).
-2. **Supabase → Table Editor → `bookings`:** a foglalás `status` mezőjét állítsd `cancelled`-re. Ezzel a dátumok újra foglalhatók lesznek.
-
-### Hasznos tudnivalók
-
-- Az ingyenes Supabase projekt egy hét tétlenség után szünetel. A napi ütemezett feladat (és a látogatók forgalma) segít ezt megelőzni, ezért fontos, hogy a `CRON_SECRET` be legyen állítva.
-- A napi feladat kézzel is futtatható (pl. teszteléshez):
-  ```bash
-  curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/daily
-  ```
-  A hátralék-levonás teszteléséhez a Supabase-ben állítsd egy előleges foglalás `balance_due_date` mezőjét a mai napra, és futtasd a fenti parancsot.
-
-## 7. Élesítés előtti ellenőrzőlista
-
-- [ ] Saját képek a `public/camper/` mappában, mintaillusztrációk törölve
+- [ ] Saját képek a `public/camper/` mappában, átméretezve (`npm run kepek`), mintaillusztrációk törölve
 - [ ] `content/camper.ts`: név, leírás, árak, extrák, cím, elérhetőség kitöltve
 - [ ] Valódi vélemények (vagy a `reviews` lista üres – ilyenkor a szekció eltűnik)
 - [ ] Jogi szövegek és cégadatok jogász által átnézve
-- [ ] Supabase tábla létrehozva, Stripe és Resend kulcsok a Vercelben
-- [ ] Stripe webhook az éles címre, Apple Pay / Google Pay bekapcsolva
-- [ ] Resend domain ellenőrizve
-- [ ] Egy teljes próbafoglalás tesztkártyával (e-mailek megérkeznek, a naptárban szürke lesz az időszak)
-- [ ] `CRON_SECRET` beállítva
+- [ ] GitHub Pages forrása: *GitHub Actions*
+- [ ] `FORMSPREE_ID` változó beállítva, a Formspree-fiók e-mail-címe megerősítve
+- [ ] Egy próbakérés elküldve – megérkezett az e-mail?
 
 ## A projekt felépítése
 
 ```
-content/camper.ts          ← MINDEN tartalom és beállítás
-public/camper/             ← képek
-app/                       ← oldalak (főoldal, /foglalas, jogi oldalak) és API végpontok
-  api/checkout             ← foglalás indítása (zárolás + Stripe)
-  api/stripe/webhook       ← fizetés véglegesítése
-  api/cron/daily           ← napi feladat
-components/sections/       ← a főoldal szekciói
-components/booking/        ← naptár, árpanel, foglalási varázsló
-lib/pricing.ts             ← árszámítás (böngésző és szerver közös)
-lib/availability.ts        ← foglalhatósági szabályok
-lib/server/                ← adatbázis, Stripe, e-mailek (csak szerveren fut)
-supabase/migrations/       ← adatbázis-séma
+content/camper.ts             ← MINDEN tartalom és beállítás (a foglalt napok is)
+public/camper/                ← képek
+.github/workflows/deploy.yml  ← kitelepítés a GitHub Pagesre minden push után
+app/                          ← oldalak: főoldal, /foglalas, jogi oldalak
+components/sections/          ← a főoldal szekciói
+components/booking/           ← naptár, árpanel, foglalási varázsló
+lib/pricing.ts                ← árszámítás
+lib/availability.ts           ← foglalhatósági szabályok
+lib/booking-request.ts        ← a foglalási kérés összeállítása és elküldése
+scripts/optimize-images.mjs   ← képek átméretezése
 ```
 
-Technológia: Next.js 16 (App Router) · TypeScript · Tailwind CSS 4 · shadcn/ui · Framer Motion (motion) · Supabase · Stripe Checkout · Resend · date-fns · Zod + React Hook Form.
+Technológia: Next.js 16 (App Router, statikus export) · TypeScript · Tailwind CSS 4 · shadcn/ui · Framer Motion (motion) · date-fns · Zod + React Hook Form · Formspree · GitHub Pages.
+
+> Az online kártyás fizetéssel, adatbázissal és automatikus e-mailekkel működő változat (Stripe, Supabase, Resend – Vercel-tárhelyre) a git előzményekben, a `18051e0` commitban található meg.

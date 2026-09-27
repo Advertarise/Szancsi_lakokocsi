@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import { useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, Loader2Icon, LockIcon, PencilIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, CopyIcon, InfoIcon, Loader2Icon, MailIcon, PencilIcon, SendIcon } from "lucide-react"
 
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar"
 import { useBooking } from "@/components/booking/booking-provider"
@@ -16,7 +16,14 @@ import { useMoney } from "@/components/shared/money"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { camper } from "@/content/camper"
-import { HOLD_MINUTES } from "@/lib/availability"
+import {
+  generateReference,
+  mailtoHref,
+  requestText,
+  sendBookingRequest,
+  type BookingRequest,
+  type SendResult,
+} from "@/lib/booking-request"
 import { formatDate, formatRange } from "@/lib/dates"
 import { paymentPlan } from "@/lib/pricing"
 import { cn } from "@/lib/utils"
@@ -28,7 +35,7 @@ const steps = [
   { title: "Időpont és extrák", short: "Időpont" },
   { title: "Személyes és vezetői adatok", short: "Adatok" },
   { title: "Összegzés és feltételek", short: "Feltételek" },
-  { title: "Fizetés", short: "Fizetés" },
+  { title: "Foglalási kérés elküldése", short: "Elküldés" },
 ] as const
 
 const defaults: BookingFormValues = {
@@ -53,8 +60,10 @@ const defaults: BookingFormValues = {
 
 export function BookingWizard({ extraIcons }: { extraIcons: Record<string, ReactNode> }) {
   const booking = useBooking()
-  const { checkIn, checkOut, extras, quote, today } = booking
+  const { checkIn, checkOut, quote, today } = booking
   const [step, setStep] = useState(0)
+  const [sent, setSent] = useState<{ request: BookingRequest; result: SendResult } | null>(null)
+  const honeypotRef = useRef<HTMLInputElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
   const mounted = useRef(false)
@@ -72,7 +81,7 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
   const paymentOption = useWatch({ control: form.control, name: "paymentOption" })
   const depositAvailable = !!quote?.depositAvailable
 
-  // Piszkozat mentése a böngészőfülre, hogy a Stripe-ról visszalépve se vesszenek el az adatok.
+  // Piszkozat mentése a böngészőfülre, hogy egy véletlen újratöltés után se vesszenek el az adatok.
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(DRAFT_KEY)
@@ -127,38 +136,20 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
       setStep(0)
       return
     }
+    const request: BookingRequest = { reference: generateReference(), quote, form: values }
     setStep(3)
     try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checkIn, checkOut, extras, form: values }),
-      })
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string
-        error?: string
-        code?: string
-        fields?: Record<string, string>
+      const result = await sendBookingRequest(request, honeypotRef.current?.value ?? "")
+      setSent({ request, result })
+      try {
+        sessionStorage.removeItem(DRAFT_KEY)
+      } catch {
+        // nem elérhető tárhely – nincs mit törölni
       }
-      if (res.ok && data.url) {
-        window.location.assign(data.url)
-        return
-      }
-      toast.error(data.error ?? "Nem sikerült elindítani a fizetést. Kérjük, próbáld újra.")
-      if (data.code === "unavailable") {
-        booking.refreshAvailability()
-        booking.clear()
-        setStep(0)
-        return
-      }
-      let target = 2
-      for (const [name, message] of Object.entries(data.fields ?? {})) {
-        form.setError(name as keyof BookingFormValues, { message })
-        if ((guestFields as readonly string[]).includes(name)) target = 1
-      }
-      setStep(target)
     } catch {
-      toast.error("Hálózati hiba történt. Ellenőrizd az internetkapcsolatot, és próbáld újra.")
+      toast.error(
+        `Nem sikerült elküldeni a kérést. Kérjük, próbáld újra, vagy írj nekünk: ${camper.contact.email}`,
+      )
       setStep(2)
     }
   }
@@ -179,7 +170,7 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
   return (
     <div ref={topRef} className="grid scroll-mt-24 gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div>
-        <Stepper current={step} onSelect={(i) => i < step && step < 3 && setStep(i)} />
+        <Stepper current={sent ? steps.length : step} onSelect={(i) => i < step && step < 3 && setStep(i)} />
 
         <form noValidate onSubmit={onSubmit} className="mt-6">
           <section aria-labelledby="lepes-cim" className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm sm:p-8">
@@ -187,7 +178,7 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
               {step + 1}. lépés a {steps.length}-ből
             </p>
             <h2 id="lepes-cim" ref={headingRef} tabIndex={-1} className="mt-1 mb-6 text-2xl font-semibold outline-none sm:text-3xl">
-              {steps[step].title}
+              {sent ? (sent.result === "sent" ? "Köszönjük, megkaptuk a kérésedet!" : "Már csak el kell küldened") : steps[step].title}
             </h2>
 
             {step === 0 && (
@@ -197,8 +188,10 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
               </div>
             )}
             {step === 1 && <GuestStep form={form} />}
-            {step === 2 && <ReviewStep form={form} onEdit={() => setStep(1)} depositAvailable={depositAvailable} />}
-            {step === 3 && <RedirectStep />}
+            {step === 2 && (
+              <ReviewStep form={form} onEdit={() => setStep(1)} depositAvailable={depositAvailable} honeypotRef={honeypotRef} />
+            )}
+            {step === 3 && (sent ? <SentStep request={sent.request} result={sent.result} /> : <SendingStep />)}
 
             {step < 3 && (
               <div className="mt-10 flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -222,8 +215,8 @@ export function BookingWizard({ extraIcons }: { extraIcons: Record<string, React
                   </Button>
                 ) : (
                   <Button type="submit" size="xl" variant="sunset" disabled={form.formState.isSubmitting}>
-                    <LockIcon data-icon="inline-start" />
-                    Tovább a biztonságos fizetéshez
+                    <SendIcon data-icon="inline-start" />
+                    Foglalási kérés elküldése
                   </Button>
                 )}
               </div>
@@ -251,7 +244,7 @@ function Stepper({ current, onSelect }: { current: number; onSelect: (i: number)
               <button
                 type="button"
                 onClick={() => onSelect(i)}
-                disabled={!done || current === 3}
+                disabled={!done || current >= 3}
                 aria-current={active ? "step" : undefined}
                 className="group flex w-full flex-col gap-2 text-left disabled:cursor-default"
               >
@@ -383,7 +376,17 @@ function GuestStep({ form }: { form: BookingForm }) {
   )
 }
 
-function ReviewStep({ form, onEdit, depositAvailable }: { form: BookingForm; onEdit: () => void; depositAvailable: boolean }) {
+function ReviewStep({
+  form,
+  onEdit,
+  depositAvailable,
+  honeypotRef,
+}: {
+  form: BookingForm
+  onEdit: () => void
+  depositAvailable: boolean
+  honeypotRef: React.RefObject<HTMLInputElement | null>
+}) {
   const { quote } = useBooking()
   const { format } = useMoney()
   const values = form.getValues()
@@ -396,17 +399,17 @@ function ReviewStep({ form, onEdit, depositAvailable }: { form: BookingForm; onE
   const options = [
     {
       value: "full" as const,
-      title: "Teljes összeg most",
+      title: "Teljes összeg",
       amount: full.payNow,
-      text: "Egy lépésben rendezed a bérleti díjat.",
+      text: "A visszaigazolás után egy összegben, átutalással rendezed a bérleti díjat.",
       disabled: false,
     },
     {
       value: "deposit" as const,
-      title: `${camper.pricing.depositPercent}% előleg most`,
+      title: `${camper.pricing.depositPercent}% előleg`,
       amount: deposit.payNow,
       text: depositAvailable
-        ? `A fennmaradó ${format(deposit.payLater)} összeget ${formatDate(deposit.payLaterDate as string)} napon automatikusan levonjuk ugyanarról a kártyáról.`
+        ? `A visszaigazolás után az előleget utalod, a fennmaradó ${format(deposit.payLater)} összeget ${formatDate(deposit.payLaterDate as string)}-ig.`
         : `Közeli indulásnál nem választható – ${camper.pricing.balanceDueDaysBefore + 2} napon belüli érkezéskor a teljes összeget kell kifizetni.`,
       disabled: !depositAvailable,
     },
@@ -514,10 +517,16 @@ function ReviewStep({ form, onEdit, depositAvailable }: { form: BookingForm; onE
         />
       </fieldset>
 
+      {/* Robotcsapda: látogatók nem látják, a Formspree eldobja a kitöltött beküldést. */}
+      <input ref={honeypotRef} type="text" name="_gotcha" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+
       <p className="flex items-start gap-3 rounded-xl border border-dashed p-4 text-sm leading-relaxed text-muted-foreground">
-        <LockIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-        A gombra kattintva a dátumokat {HOLD_MINUTES} percre zároljuk, és átirányítunk a Stripe biztonságos fizetési
-        oldalára (bankkártya, Apple Pay, Google Pay). Ha a fizetés nem fejeződik be, a dátumok automatikusan felszabadulnak.
+        <InfoIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <span>
+          Ez még nem végleges foglalás, és most nem kell fizetned. {camper.contact.responseTime} E-mailben visszaigazoljuk
+          az időpontot, és elküldjük a fizetési tudnivalókat. A foglalás a{" "}
+          {camper.pricing.depositPercent > 0 ? "választott összeg" : "bérleti díj"} beérkezésével válik véglegessé.
+        </span>
       </p>
     </div>
   )
@@ -557,14 +566,107 @@ function Consent({
   )
 }
 
-function RedirectStep() {
+function SendingStep() {
   return (
     <div className="flex flex-col items-center py-10 text-center" role="status">
       <Loader2Icon className="size-10 animate-spin text-primary" aria-hidden="true" />
-      <p className="mt-6 font-heading text-xl font-semibold">Átirányítás a biztonságos fizetési oldalra…</p>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        A dátumokat {HOLD_MINUTES} percre lefoglaltuk neked. Kérjük, ne zárd be az ablakot.
-      </p>
+      <p className="mt-6 font-heading text-xl font-semibold">A foglalási kérés küldése…</p>
+      <p className="mt-2 max-w-md text-sm text-muted-foreground">Kérjük, ne zárd be az ablakot.</p>
+    </div>
+  )
+}
+
+function SentStep({ request, result }: { request: BookingRequest; result: SendResult }) {
+  const { format } = useMoney()
+  const [copied, setCopied] = useState(false)
+  const { quote: q, form: f } = request
+  const plan = paymentPlan(q, f.paymentOption)
+  const { pickup, contact } = camper
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(requestText(request))
+      setCopied(true)
+    } catch {
+      toast.error("Nem sikerült a vágólapra másolni – jelöld ki és másold a szöveget kézzel.")
+    }
+  }
+
+  return (
+    <div className="space-y-8" role="status">
+      {result === "sent" ? (
+        <p className="text-lg leading-relaxed">
+          A foglalási kérésed megérkezett hozzánk. {contact.responseTime} A visszaigazolást a{" "}
+          <strong>{f.email}</strong> címre küldjük.
+        </p>
+      ) : (
+        <div className="space-y-4 rounded-2xl border border-sunset/50 bg-sunset/10 p-5">
+          <p className="leading-relaxed">
+            Megnyitottuk a levelezőprogramodat egy kitöltött levéllel – kattints benne a <strong>Küldés</strong> gombra.
+            Ha nem nyílt meg, másold ki a lenti szöveget, és küldd el a(z) <strong>{contact.email}</strong> címre.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="sunset" size="lg">
+              <a href={mailtoHref(request)}>
+                <MailIcon data-icon="inline-start" />
+                Levél megnyitása újra
+              </a>
+            </Button>
+            <Button type="button" variant="outline" size="lg" onClick={copy}>
+              <CopyIcon data-icon="inline-start" />
+              {copied ? "Kimásolva!" : "Szöveg másolása"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-2xl border">
+        <div className="flex flex-col items-center gap-1 bg-primary px-6 py-5 text-primary-foreground">
+          <p className="text-xs tracking-widest uppercase opacity-85">Foglalási azonosító</p>
+          <p className="font-heading text-3xl font-semibold tracking-wider select-all">{request.reference}</p>
+        </div>
+        <dl className="divide-y px-5 text-sm">
+          {[
+            ["Időpont", `${formatRange(q.checkIn, q.checkOut)} · ${q.nights} éj`],
+            ["Átvétel", `${formatDate(q.checkIn)} · ${pickup.pickupWindow.from}–${pickup.pickupWindow.to}`],
+            ["Visszaadás", `${formatDate(q.checkOut)} · ${pickup.returnWindow.from}–${pickup.returnWindow.to}`],
+            ["Bérleti díj", format(q.total)],
+            [
+              "Fizetés",
+              plan.option === "deposit" && plan.payLaterDate
+                ? `${format(plan.payNow)} előleg, a maradék ${formatDate(plan.payLaterDate)}-ig`
+                : `${format(plan.payNow)} a visszaigazolás után`,
+            ],
+          ].map(([label, value]) => (
+            <div key={label} className="grid gap-1 py-3 sm:grid-cols-[140px_1fr]">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div>
+        <h3 className="font-sans text-base font-semibold">Mi történik ezután?</h3>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground">
+          <li>Ellenőrizzük az időpontot, és e-mailben visszaigazoljuk a foglalást.</li>
+          <li>A levélben elküldjük az utalási adatokat – a foglalás a befizetéssel válik véglegessé.</li>
+          <li>
+            {formatDate(q.checkIn)} napon {pickup.pickupWindow.from} és {pickup.pickupWindow.to} között várunk az
+            átvételnél: {pickup.address.replace(/\.$/, "")}.
+          </li>
+        </ol>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Kérdésed van? {contact.phone} · {contact.email}
+        </p>
+      </div>
+
+      <Button asChild variant="outline" size="lg">
+        <Link href="/">
+          <ArrowLeftIcon data-icon="inline-start" />
+          Vissza a főoldalra
+        </Link>
+      </Button>
     </div>
   )
 }

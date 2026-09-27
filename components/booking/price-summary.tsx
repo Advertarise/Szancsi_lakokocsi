@@ -35,7 +35,6 @@ export function PriceSummary({
 }) {
   const { checkIn, checkOut, quote } = useBooking()
   const { format, approx } = useMoney()
-  const deposit = camper.pricing.securityDeposit
   const plan = quote && paymentOption ? paymentPlan(quote, paymentOption) : null
 
   return (
@@ -105,22 +104,27 @@ export function PriceSummary({
               <Line label="Összesen" value={format(quote.total)} strong />
               <Line
                 label="Kaució"
-                hint={deposit.collect === "atPickup" ? "átvételkor fizetendő, visszajár" : "a fizetéssel együtt, visszajár"}
+                hint="átvételkor fizetendő, visszajár"
                 value={format(quote.securityDeposit)}
               />
             </dl>
             {plan ? (
               <dl className="pt-2">
-                <Line label="Most fizetendő" value={format(plan.payNow)} strong />
+                <Line
+                  label={plan.payLater > 0 ? "Előleg" : "Fizetendő"}
+                  hint="a visszaigazolás után"
+                  value={format(plan.payNow)}
+                  strong
+                />
                 {plan.payLater > 0 && plan.payLaterDate && (
-                  <Line label="Automatikus levonás" hint={formatDate(plan.payLaterDate)} value={format(plan.payLater)} />
+                  <Line label="Hátralék" hint={`${formatDate(plan.payLaterDate)}-ig`} value={format(plan.payLater)} />
                 )}
               </dl>
             ) : (
               quote.depositAvailable && (
                 <p className="pt-3 text-xs leading-relaxed text-muted-foreground">
-                  Fizethetsz {camper.pricing.depositPercent}% előleget is ({format(quote.depositAmount)}), a fennmaradó
-                  összeget {formatDate(quote.balanceDueDate as string)} napon vonjuk le automatikusan.
+                  Fizethetsz {camper.pricing.depositPercent}% előleget is ({format(quote.depositAmount)}), ilyenkor a fennmaradó
+                  összeget {formatDate(quote.balanceDueDate as string)}-ig kell rendezni.
                 </p>
               )
             )}
@@ -138,7 +142,8 @@ export function PriceSummary({
       <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
         <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
         <span>
-          Biztonságos fizetés a Stripe-on keresztül. {approx && "Az euróban mutatott árak tájékoztató jellegűek, a fizetés forintban történik."}
+          Most még nem fizetsz: a foglalási kérést e-mailben visszaigazoljuk.{" "}
+          {approx && "Az euróban mutatott árak tájékoztató jellegűek, a fizetés forintban történik."}
         </span>
       </p>
     </section>

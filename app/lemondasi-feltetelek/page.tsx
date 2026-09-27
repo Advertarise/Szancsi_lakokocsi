@@ -5,7 +5,7 @@ import { camper } from "@/content/camper"
 
 export const metadata: Metadata = {
   title: "Lemondási feltételek",
-  alternates: { canonical: "/lemondasi-feltetelek" },
+  alternates: { canonical: "/lemondasi-feltetelek/" },
 }
 
 function ruleLabel(rules: { daysBefore: number }[], i: number) {

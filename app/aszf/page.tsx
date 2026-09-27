@@ -5,7 +5,7 @@ import { camper } from "@/content/camper"
 
 export const metadata: Metadata = {
   title: "Általános Szerződési Feltételek",
-  alternates: { canonical: "/aszf" },
+  alternates: { canonical: "/aszf/" },
 }
 
 export default function TermsPage() {

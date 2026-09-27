@@ -4,9 +4,6 @@ import { camper } from "@/content/camper"
 import { addDaysISO, eachNight, formatDate, isISODate, nightsBetween, parseISODate, toISODate } from "@/lib/dates"
 import { minNightsFor } from "@/lib/pricing"
 
-/** Ennyi percig zároljuk a dátumokat a fizetés befejezéséig. */
-export const HOLD_MINUTES = 15
-
 /**
  * Nem foglalható időszak éjszakákban: `start` az első foglalt éjszaka,
  * `end` az első újra szabad éjszaka (kizárólagos vég). Így a foglalások

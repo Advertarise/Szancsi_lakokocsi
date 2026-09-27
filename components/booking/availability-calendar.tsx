@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { DayPicker, type DayButtonProps } from "react-day-picker"
 import { hu } from "react-day-picker/locale"
-import { ChevronLeftIcon, ChevronRightIcon, Loader2Icon, RotateCcwIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronLeftIcon, ChevronRightIcon, Loader2Icon, RotateCcwIcon } from "lucide-react"
 
 import { useBooking } from "@/components/booking/booking-provider"
 import { useHydrated } from "@/hooks/use-hydrated"
@@ -85,8 +85,7 @@ export function AvailabilityCalendar({ className }: { className?: string }) {
 }
 
 function CalendarInner({ className }: { className?: string }) {
-  const { checkIn, checkOut, setDates, clear, unavailable, today, availabilityStatus, refreshAvailability, stayError } =
-    useBooking()
+  const { checkIn, checkOut, setDates, clear, unavailable, today, stayError } = useBooking()
   const [hint, setHint] = useState<string | null>(null)
   const { compact } = useMoney()
   const { earliestCheckIn, latestCheckOut } = bookingWindow(today)
@@ -118,7 +117,7 @@ function CalendarInner({ className }: { className?: string }) {
 
   return (
     <div className={className}>
-      <div className="relative">
+      <div>
         <DayPicker
           mode="range"
           locale={hu}
@@ -166,14 +165,6 @@ function CalendarInner({ className }: { className?: string }) {
               ),
           }}
         />
-        {availabilityStatus === "loading" && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-[1px]">
-            <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm shadow">
-              <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
-              Szabad időpontok betöltése…
-            </span>
-          </div>
-        )}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
@@ -189,15 +180,7 @@ function CalendarInner({ className }: { className?: string }) {
       </div>
 
       <div aria-live="polite" className="mt-4 min-h-6">
-        {availabilityStatus === "error" ? (
-          <p className="inline-flex flex-wrap items-center gap-2 text-sm text-destructive">
-            <TriangleAlertIcon className="size-4" aria-hidden="true" />
-            Nem sikerült betölteni a foglaltságot.
-            <Button variant="link" size="sm" className="h-auto p-0" onClick={refreshAvailability}>
-              Újrapróbálom
-            </Button>
-          </p>
-        ) : status ? (
+        {status ? (
           <p className={cn("text-sm", stayError ? "font-medium text-destructive" : "text-muted-foreground")}>{status}</p>
         ) : checkIn && checkOut ? (
           <p className="text-sm text-muted-foreground">

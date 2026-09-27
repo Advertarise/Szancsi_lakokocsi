@@ -28,7 +28,7 @@ export function PricingTable() {
             icon: PercentIcon,
             title: "Rugalmas fizetés",
             value: `${pricing.depositPercent}% előleg`,
-            text: `Foglaláskor elég az előleget kifizetni, a maradékot ${pricing.balanceDueDaysBefore} nappal indulás előtt automatikusan levonjuk.`,
+            text: `A visszaigazolás után elég az előleget elutalni, a maradékot legkésőbb ${pricing.balanceDueDaysBefore} nappal indulás előtt kell rendezni.`,
           },
         ]
       : []),

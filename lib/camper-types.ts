@@ -97,15 +97,14 @@ export interface CamperConfig {
     maxNights: number
     seasons: Season[]
     cleaningFee: number
+    /** Kaució – átvételkor fizetendő, a jármű visszaadása után visszajár */
     securityDeposit: {
       amount: number
-      /** "atPickup": átvételkor kell kifizetni, "online": a foglalás összegével együtt kerül terhelésre */
-      collect: "atPickup" | "online"
       note: string
     }
     /** Előleg százaléka, ha a vendég az előleges fizetést választja (0 = kikapcsolva) */
     depositPercent: number
-    /** A fennmaradó összeget ennyi nappal az indulás előtt vonjuk le automatikusan */
+    /** A fennmaradó összeget legkésőbb ennyi nappal az indulás előtt kell kifizetni */
     balanceDueDaysBefore: number
     includedKmPerDay?: number
     extraKmFee?: number

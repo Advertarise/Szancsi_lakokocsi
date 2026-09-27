@@ -14,6 +14,7 @@ import {
 import { Reveal } from "@/components/shared/reveal"
 import { Section } from "@/components/shared/section"
 import { camper } from "@/content/camper"
+import { asset } from "@/lib/site"
 
 const meters = (cm: number) => (cm / 100).toLocaleString("hu-HU", { minimumFractionDigits: 2 })
 
@@ -56,7 +57,7 @@ export function Intro() {
           {feature && (
             <Reveal delay={0.1} className="mt-10 hidden lg:block">
               <figure className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-xl shadow-black/10">
-                <Image src={feature.src} alt={feature.alt} fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" />
+                <Image src={asset(feature.src)} alt={feature.alt} fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" />
               </figure>
             </Reveal>
           )}

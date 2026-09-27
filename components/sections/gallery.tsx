@@ -8,6 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon, ExpandIcon, XIcon } from "lucide-rea
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import type { CamperImage } from "@/lib/camper-types"
+import { asset } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
 type Filter = "all" | CamperImage["category"]
@@ -66,7 +67,7 @@ export function GalleryGrid({ images }: { images: CamperImage[] }) {
               className="group relative block size-full overflow-hidden rounded-2xl bg-muted shadow-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <Image
-                src={img.src}
+                src={asset(img.src)}
                 alt={img.alt}
                 fill
                 sizes={i === 0 ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 50vw"}
@@ -169,7 +170,7 @@ function Lightbox({
                   transition={{ duration: 0.3, ease: "easeOut" }}
                   className="absolute inset-0 mx-4 sm:mx-20"
                 >
-                  <Image src={current.src} alt={current.alt} fill sizes="100vw" className="object-contain" />
+                  <Image src={asset(current.src)} alt={current.alt} fill sizes="100vw" className="object-contain" />
                 </motion.div>
               </AnimatePresence>
 

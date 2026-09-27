@@ -6,6 +6,7 @@ import { Reveal } from "@/components/shared/reveal"
 import { Button } from "@/components/ui/button"
 import { camper } from "@/content/camper"
 import { lowestNightlyRate } from "@/lib/pricing"
+import { asset } from "@/lib/site"
 
 export function Hero() {
   const { specs } = camper
@@ -19,7 +20,7 @@ export function Hero() {
   return (
     <section aria-labelledby="hero-cim" className="relative isolate flex min-h-svh items-end overflow-hidden text-white">
       <Image
-        src={camper.hero.image}
+        src={asset(camper.hero.image)}
         alt={camper.hero.alt}
         fill
         preload

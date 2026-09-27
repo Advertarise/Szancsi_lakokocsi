@@ -5,7 +5,7 @@ import { camper } from "@/content/camper"
 
 export const metadata: Metadata = {
   title: "Adatvédelmi tájékoztató",
-  alternates: { canonical: "/adatvedelem" },
+  alternates: { canonical: "/adatvedelem/" },
 }
 
 export default function PrivacyPage() {

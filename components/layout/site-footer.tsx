@@ -93,7 +93,7 @@ export function SiteFooter({ mobileBarSpace = false }: { mobileBarSpace?: boolea
           <p>
             © {new Date().getFullYear()} {camper.name} · {legal.operator.name}
           </p>
-          <p>Biztonságos fizetés: Stripe · bankkártya, Apple Pay, Google Pay</p>
+          <p>Online foglalási kérés · visszaigazolás e-mailben · fizetés átutalással</p>
         </div>
       </div>
     </footer>

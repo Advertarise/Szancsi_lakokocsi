@@ -93,15 +93,3 @@ export const guestFields = [
   "licenceExpiresAt",
   "notes",
 ] as const satisfies readonly (keyof BookingFormValues)[]
-
-export const checkoutRequestSchema = z.object({
-  checkIn: z.string().refine(isISODate),
-  checkOut: z.string().refine(isISODate),
-  extras: z
-    .array(z.string())
-    .max(camper.extras.length)
-    .refine((ids) => ids.every((id) => camper.extras.some((e) => e.id === id)), "Ismeretlen extra."),
-  form: z.record(z.string(), z.unknown()),
-})
-
-export type CheckoutRequest = z.infer<typeof checkoutRequestSchema>

@@ -50,8 +50,8 @@ export interface Quote {
   extrasTotal: number
   /** A bérlés teljes díja (kaució nélkül) */
   total: number
+  /** Átvételkor fizetendő, visszajár */
   securityDeposit: number
-  securityDepositOnline: boolean
   /** Van-e lehetőség előleges fizetésre ennél a foglalásnál */
   depositAvailable: boolean
   depositAmount: number
@@ -61,8 +61,11 @@ export interface Quote {
 
 export interface PaymentPlan {
   option: PaymentOption
+  /** A visszaigazolás után elsőként fizetendő összeg (előleg vagy a teljes díj) */
   payNow: number
+  /** A hátralék, ha előleget választott */
   payLater: number
+  /** A hátralék határideje */
   payLaterDate: string | null
 }
 
@@ -70,10 +73,7 @@ export function balanceDueDateFor(checkIn: string): string {
   return addDaysISO(checkIn, -pricing.balanceDueDaysBefore)
 }
 
-/**
- * Előleg csak akkor választható, ha a fennmaradó összeg levonásáig még
- * legalább 2 nap van (a napi ütemezett feladat biztosan lefusson előtte).
- */
+/** Előleg csak akkor választható, ha a hátralék határidejéig még legalább 2 nap van. */
 export function isDepositAvailable(checkIn: string, today: string): boolean {
   if (pricing.depositPercent <= 0 || pricing.depositPercent >= 100) return false
   return nightsBetween(today, balanceDueDateFor(checkIn)) >= 2
@@ -106,7 +106,6 @@ export function quote(input: { checkIn: string; checkOut: string; extras: string
   const extrasTotal = extras.reduce((sum, e) => sum + e.total, 0)
 
   const total = accommodationTotal + pricing.cleaningFee + extrasTotal
-  const securityDepositOnline = pricing.securityDeposit.collect === "online"
   const depositAvailable = isDepositAvailable(checkIn, today)
   const depositAmount = Math.round((total * pricing.depositPercent) / 100)
 
@@ -121,7 +120,6 @@ export function quote(input: { checkIn: string; checkOut: string; extras: string
     extrasTotal,
     total,
     securityDeposit: pricing.securityDeposit.amount,
-    securityDepositOnline,
     depositAvailable,
     depositAmount,
     balanceAmount: total - depositAmount,
@@ -129,16 +127,10 @@ export function quote(input: { checkIn: string; checkOut: string; extras: string
   }
 }
 
-/** Mennyit kell most és mennyit később fizetni. Online kaució esetén az a teljes összeggel / a maradékkal együtt kerül terhelésre. */
+/** Mennyit kell a visszaigazolás után és mennyit később fizetni (a kaució nélkül). */
 export function paymentPlan(q: Quote, option: PaymentOption): PaymentPlan {
-  const onlineDeposit = q.securityDepositOnline ? q.securityDeposit : 0
   if (option === "deposit" && q.depositAvailable) {
-    return {
-      option,
-      payNow: q.depositAmount,
-      payLater: q.balanceAmount + onlineDeposit,
-      payLaterDate: q.balanceDueDate,
-    }
+    return { option, payNow: q.depositAmount, payLater: q.balanceAmount, payLaterDate: q.balanceDueDate }
   }
-  return { option: "full", payNow: q.total + onlineDeposit, payLater: 0, payLaterDate: null }
+  return { option: "full", payNow: q.total, payLater: 0, payLaterDate: null }
 }
