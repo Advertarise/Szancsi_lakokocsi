@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-fraunces), ui-serif, Georgia, serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* Márkaszínek */
+  --color-sunset: var(--sunset);
+  --color-sunset-foreground: var(--sunset-foreground);
+  --color-sunset-ink: var(--sunset-ink);
+  --color-forest: var(--forest);
+  --color-sand: var(--sand);
+  --color-surface: var(--surface);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Paletta: homok #E9DCC9, erdőzöld #2F4F3A, naplemente-narancs #E07A3F.
+ * A narancs gombokon sötét szöveg van (5,9:1), fehér szöveg nem érné el a
+ * WCAG AA 4,5:1 kontrasztot. Narancs szöveghez a sötétebb --sunset-ink kell.
+ */
+:root {
+  --radius: 0.75rem;
+  --background: #fdfbf7;
+  --foreground: #1c1a17;
+  --surface: #f5eee3;
+  --card: #ffffff;
+  --card-foreground: #1c1a17;
+  --popover: #ffffff;
+  --popover-foreground: #1c1a17;
+  --primary: #2f4f3a;
+  --primary-foreground: #ffffff;
+  --secondary: #e9dcc9;
+  --secondary-foreground: #1f3527;
+  --muted: #f3ece1;
+  --muted-foreground: #5b5750;
+  --accent: #efe6d8;
+  --accent-foreground: #1f3527;
+  --destructive: #b42318;
+  --border: #e4d9c8;
+  --input: #9d907c;
+  --ring: #b9531f;
+  --sunset: #e07a3f;
+  --sunset-foreground: #1c1a17;
+  --sunset-ink: #a94e1c;
+  --forest: #2f4f3a;
+  --sand: #e9dcc9;
+}
+
+.dark {
+  --background: #111913;
+  --foreground: #efe7da;
+  --surface: #162019;
+  --card: #19241d;
+  --card-foreground: #efe7da;
+  --popover: #19241d;
+  --popover-foreground: #efe7da;
+  --primary: #8db49a;
+  --primary-foreground: #0e1511;
+  --secondary: #2a3a30;
+  --secondary-foreground: #efe7da;
+  --muted: #1e2a23;
+  --muted-foreground: #b3aa9c;
+  --accent: #243229;
+  --accent-foreground: #efe7da;
+  --destructive: #f97066;
+  --border: #2c3b32;
+  --input: #5e7266;
+  --ring: #f2a36b;
+  --sunset: #e8874d;
+  --sunset-foreground: #1c1a17;
+  --sunset-ink: #f2a36b;
+  --forest: #8db49a;
+  --sand: #2a3a30;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    scroll-padding-top: 5rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
+    font-optical-sizing: auto;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  /* Jól látható fókusz billentyűzetes navigációhoz */
+  a:focus-visible,
+  summary:focus-visible {
+    @apply rounded-md outline-2 outline-offset-2 outline-ring;
+  }
+}
